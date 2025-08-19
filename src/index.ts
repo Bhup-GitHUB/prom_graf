@@ -24,6 +24,13 @@ const requestCounter = new promCleint.Counter({
   labelNames: ["method", "route", "status_code"],
 });
 
+const requestHistogram = new promCleint.Histogram({
+  name: "http_request_duration_seconds",
+  help: "Duration of HTTP requests in seconds",
+  labelNames: ["method", "route", "code"],
+  buckets: [0.1, 5, 15, 50, 100, 200, 300, 400, 500],
+});
+
 function requestCountMiddleware(
   req: Request,
   res: Response,
@@ -49,6 +56,9 @@ function requestCountMiddleware(
     if (req.route.path !== "/metric") {
       requestGauge.dec();
     }
+    //updating historgram
+    requestHistogram.observe(endTime - startTime);
+    
   });
   next();
 }
@@ -56,7 +66,7 @@ function requestCountMiddleware(
 // app.use(middleware);
 
 app.get("/cpu", requestCountMiddleware, (req: Request, res: Response) => {
-  for (let i = 0; i < 100000022222222222222222222222222222222222200; i++) {
+  for (let i = 0; i < 1200; i++) {
     Math.random();
   }
 
