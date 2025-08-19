@@ -14,11 +14,25 @@ import promCleint from "prom-client";
 //   console.log("request took " + timeTake + "ms", "on route " + req.url);
 // }
 
+const requestGauge = new promCleint.Gauge({
+  name: "active_requests",
+  help: "Number of active requests",
+});
+const requestCounter = new promCleint.Counter({
+  name: "htt_request_counter",
+  help: "Number of HTTP requests",
+  labelNames: ["method", "route", "status_code"],
+});
+
 function requestCountMiddleware(
   req: Request,
   res: Response,
   next: NextFunction
 ) {
+  // Increment request gauge
+  if (req.route.path !== "/metric") {
+    requestGauge.inc();
+  }
   const startTime = Date.now();
 
   res.on("finish", () => {
@@ -31,19 +45,18 @@ function requestCountMiddleware(
       route: req.route ? req.route.path : req.path,
       status_code: res.statusCode,
     });
+    //decrease request gauge
+    if (req.route.path !== "/metric") {
+      requestGauge.dec();
+    }
   });
   next();
 }
 
-const requestCounter = new promCleint.Counter({
-  name: "htt_request_counter",
-  help: "Number of HTTP requests",
-  labelNames: ["method", "route", "status_code"],
-});
 // app.use(middleware);
 
 app.get("/cpu", requestCountMiddleware, (req: Request, res: Response) => {
-  for (let i = 0; i < 100000000; i++) {
+  for (let i = 0; i < 100000022222222222222222222222222222222222200; i++) {
     Math.random();
   }
 
