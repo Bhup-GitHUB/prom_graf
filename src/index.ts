@@ -58,7 +58,6 @@ function requestCountMiddleware(
     }
     //updating historgram
     requestHistogram.observe(endTime - startTime);
-    
   });
   next();
 }
