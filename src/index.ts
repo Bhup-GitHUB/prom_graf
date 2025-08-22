@@ -1,88 +1,34 @@
-const express = require("express");
+import express from "express";
+
+import client from "prom-client";
+import { metricsMiddleware } from "./metrics";
+import { middleware } from "./middlewares/middleware";
+
 const app = express();
-import { Request, Response, NextFunction } from "express";
-// import { middleware } from "./middleware/middleware";
-import promCleint from "prom-client";
 
-// function middleware(req: Request, res: Response, next: NextFunction) {
-//   const startTime = Date.now();
-//   next();
+app.use(express.json());
+app.use(middleware);
+app.use(metricsMiddleware);
 
-//   const endTIme = Date.now();
-//   var timeTake = endTIme - startTime;
-
-//   console.log("request took " + timeTake + "ms", "on route " + req.url);
-// }
-
-const requestGauge = new promCleint.Gauge({
-  name: "active_requests",
-  help: "Number of active requests",
-});
-const requestCounter = new promCleint.Counter({
-  name: "htt_request_counter",
-  help: "Number of HTTP requests",
-  labelNames: ["method", "route", "status_code"],
-});
-
-const requestHistogram = new promCleint.Histogram({
-  name: "http_request_duration_seconds",
-  help: "Duration of HTTP requests in seconds",
-  labelNames: ["method", "route", "code"],
-  buckets: [0.1, 5, 15, 50, 100, 200, 300, 400, 500],
-});
-
-function requestCountMiddleware(
-  req: Request,
-  res: Response,
-  next: NextFunction
-) {
-  // Increment request gauge
-  if (req.route.path !== "/metric") {
-    requestGauge.inc();
-  }
-  const startTime = Date.now();
-
-  res.on("finish", () => {
-    const endTime = Date.now();
-    console.log(`Request took ${endTime - startTime}ms`);
-
-    // Increment request counter
-    requestCounter.inc({
-      method: req.method,
-      route: req.route ? req.route.path : req.path,
-      status_code: res.statusCode,
-    });
-    //decrease request gauge
-    if (req.route.path !== "/metric") {
-      requestGauge.dec();
-    }
-    //updating historgram
-    requestHistogram.observe(endTime - startTime);
-  });
-  next();
-}
-
-// app.use(middleware);
-
-app.get("/cpu", requestCountMiddleware, (req: Request, res: Response) => {
-  for (let i = 0; i < 1200; i++) {
-    Math.random();
-  }
-
-  res.json({
-    "return ": "cpu endpoint",
+app.get("/user", async (req, res) => {
+  await new Promise((resolve) => setTimeout(resolve, 1000));
+  res.send({
+    name: "John Doe",
+    age: 25,
   });
 });
 
-app.get("/get", requestCountMiddleware, (req: Request, res: Response) => {
-  res.json({
-    "return ": "get endpoint",
+app.post("/user", (req, res) => {
+  const user = req.body;
+  res.send({
+    ...user,
+    id: 1,
   });
 });
-app.get("/metrics", async (req: Request, res: Response) => {
-  const metrics = await promCleint.register.metrics();
-  console.log(promCleint.register.contentType);
-  res.set("Content-Type", promCleint.register.contentType); ///text hoga most probably
+
+app.get("/metrics", async (req, res) => {
+  const metrics = await client.register.metrics();
+  res.set("Content-Type", client.register.contentType);
   res.end(metrics);
 });
 
